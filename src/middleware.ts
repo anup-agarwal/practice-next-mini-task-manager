@@ -8,30 +8,25 @@ export const config = {
   matcher: [loggedInRoutes, loggedOutRoutes],
 }
 
-const AllowRoutes = (
-  routes: string[],
-  request: NextRequest,
-  redirectURL: string
-) => {
-  if (routes.indexOf(request.nextUrl.pathname) >= 0) {
-    return NextResponse.next()
-  } else
-    return NextResponse.redirect(new URL(redirectURL, "http://localhost:3000"))
-}
-
 const middleware = async (request: NextRequest) => {
   const token = request.cookies.get("token")
 
-  if (!token) {
-    return AllowRoutes(loggedOutRoutes, request, "/login")
+  if (token) {
+    try {
+      await jwtVerify(token.value, new TextEncoder().encode("secret"))
+      if (loggedInRoutes.indexOf(request.nextUrl.pathname) >= 0) {
+        return NextResponse.next()
+      } else NextResponse.redirect(new URL("/", "http://localhost:3000"))
+    } catch (error) {
+      console.log(error)
+      return NextResponse.redirect(new URL("/", "http://localhost:3000"))
+    }
   }
 
-  try {
-    await jwtVerify(token.value, new TextEncoder().encode("secret"))
-    return AllowRoutes(loggedInRoutes, request, "/")
-  } catch (error) {
-    console.log(error)
-    return NextResponse.redirect(new URL("/login", "http://localhost:3000"))
+  if (!token) {
+    if (loggedOutRoutes.indexOf(request.nextUrl.pathname) >= 0) {
+      return NextResponse.next()
+    }
   }
 }
 
